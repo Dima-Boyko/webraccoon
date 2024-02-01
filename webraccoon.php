@@ -7,6 +7,10 @@
 **************************************************************************************
 */
 
+ini_set('error_reporting', E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1); 
+
 class WebRaccoon
 {
 
@@ -90,15 +94,8 @@ class WebRaccoon
 
 	static public function Zip(){
 		if(empty($_GET['zip']))return false;
-		$path=self::getFilePath(self::LGet('zip'));
-		$list=Array();
-		if(is_dir($path)){
-			$list=self::DirTree($path);
-		}else{
-			array_push($list,$path);
-		}
-		
-		self::Archive($path,$list);
+		$name=self::LGet('zip');
+		self::Archive($name,self::getFilePath());
 		self::Redirect('?path='.self::LGet('path'));
 	}
 
@@ -160,11 +157,10 @@ class WebRaccoon
 	static public function DirTree($dir){
 		if(!file_exists($dir))return false;
 		$ListFiles=Array();
-		array_push($ListFiles,$dir);
 		$List=scandir($dir);
 		foreach($List as $file){
 			if($file=='.' OR $file=='..' )continue;
-			$FilePath=$dir.DIRECTORY_SEPARATOR.$file;
+			$FilePath=$dir.'/'.$file;
 			if(is_file($FilePath)){
 				array_push($ListFiles,$FilePath);
 			}else{
@@ -174,21 +170,33 @@ class WebRaccoon
 				}
 			}
 		}
-		
+		if(count($ListFiles)==0)array_push($ListFiles,$dir);
 		return $ListFiles;
 		
 	}
 
-	static public function Archive($archive_name='archive',$list_archive=Array()){
-		if(empty($list_archive))return false;
+	static public function Archive($name='archive',$path=''){
+		if(empty($path))return false;
 
-		$len=strlen(__DIR__);
-		$len++;
+		$len=strlen($path);
+		$path_name=$path.$name;
+		$list_archive=Array();
+		if(is_dir($path_name)){
+			$list_archive=self::DirTree($path_name);
+		}else{
+			array_push($list_archive,$path_name);
+		}
+
 		$zip = new ZipArchive(); 
-		$zip->open($archive_name.".zip", ZIPARCHIVE::CREATE); 
+		$zip->open($path_name.".zip", ZIPARCHIVE::CREATE); 
 		foreach($list_archive as $add){
-			$zip_dir=substr($add,$len); 
-			$zip->addFile($add,$zip_dir); 
+			$zip_dir=substr($add,$len);
+			if(is_dir($add)){
+				$zip->addEmptyDir($zip_dir); 
+			}else{
+				$zip->addFile($add,$zip_dir); 
+			}
+			
 			
 		}
 		$zip->close();
