@@ -19,6 +19,11 @@ class WebRaccoon
 	static public $path='';
 	static public $back='';
 	static public $view='';
+	static public $max_file_size=10000000000;//byte
+	static public $users=Array(
+		'admin'=>'rt#83u',
+		'user'=>'g7kif1'
+	);
 
 	static public function Start(){
 		self::Controller();
@@ -70,6 +75,13 @@ class WebRaccoon
 	}
 
 
+	static public function getFilePath($file_name=''){
+		$path=self::$path;
+		$path.='/';
+		return self::$root.$path.$file_name;
+	}
+
+
 	static public function Save(){
 		if(empty($_POST['save']))return false;
 		$file=self::getFilePath(self::LGet('edit'));
@@ -112,13 +124,40 @@ class WebRaccoon
 	static public function Delete(){
 		if(empty($_GET['delete']))return false;
 		$path=self::getFilePath(self::LGet('delete'));
-		if(is_dir($path)){
-			rmdir($path);
-		}else{
+		if(is_file($path)){
 			unlink($path);
+		}else{
+			self::DeleteFolder($path);
 		}
-
+		
 		self::Redirect('?path='.self::LGet('path'));
+	}
+
+	static public function DeleteFolder($path=''){
+		if(!file_exists($path))return false;
+		$List=scandir($path);
+		foreach($List as $file){
+			if($file=='.' OR $file=='..' )continue;
+			$FilePath=$path. DIRECTORY_SEPARATOR .$file;
+
+
+			if(is_file($FilePath)){
+				unlink($FilePath);
+			}else{
+				self::DeleteFolder($FilePath);
+			}
+			
+		}
+		
+
+		if( __DIR__ !== $path){
+			$List=scandir($path);
+			if(count($List) < 3){
+				rmdir($path);
+			}
+		}
+		
+		
 	}
 
 	static public function Download(){
@@ -208,6 +247,11 @@ class WebRaccoon
 		if(self::$view=='edit')self::ViewEdit();
 	}
 
+	static public function ViewLogin(){
+	?>
+	<?php
+	}
+
 	static public function FileManager(){
 		?>
 		<div class="ToolBar">
@@ -219,6 +263,7 @@ class WebRaccoon
 			<div class="item left">
 				<?php self::IconUpload();?><span> Upload: </span>
 				<form enctype="multipart/form-data" method="POST">
+					<input type="hidden" name="MAX_FILE_SIZE" value="<?php echo self::$max_file_size;?>" />
 				    <input name="uploaded_file" type="file" />
 				    <input type="submit" value="Upload file" />
 				</form>
@@ -280,11 +325,7 @@ class WebRaccoon
 
 
 
-	static public function getFilePath($file_name=''){
-		$path=self::$path;
-		$path.='/';
-		return self::$root.$path.$file_name;
-	}
+	
 
 	static public function ViewEdit(){
 		$file_name=self::LGet('edit');
