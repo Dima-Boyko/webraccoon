@@ -22,7 +22,7 @@ class WebRaccoon
 	static public $max_file_size=10000000000;//byte
 	static public $users=Array(
 		'admin'=>'rt#83u',
-		'user'=>'g7kif1'
+		'user'=>'usr@123'
 	);
 
 	static public function Start(){
@@ -31,6 +31,8 @@ class WebRaccoon
 	}
 
 	static public function Controller(){
+		if(!self::Authorization())return false;
+		self::$view='fm';
 		self::$root=$_SERVER['DOCUMENT_ROOT'];
 		if(self::IGet('path')){
 			$path=self::LGet('path');
@@ -79,6 +81,31 @@ class WebRaccoon
 		$path=self::$path;
 		$path.='/';
 		return self::$root.$path.$file_name;
+	}
+
+	static public function Authorization(){
+		if(self::LGet('logout')=='y'){
+			SetCookie("wrc_user",'',time());  
+			SetCookie("wrc_password",'',time());
+			self::Redirect('?'); 
+		}
+		if(isset($_POST['frm-login'])){
+			if(empty($_POST['login']) || empty($_POST['password']))return false;
+			$login=$_POST['login'];
+			if(empty(self::$users[$login]))return false;
+			if(self::$users[$login]!=$_POST['password'])return false;
+			$password=md5(self::$users[$login]);
+		}else{
+			if(empty($_COOKIE['wrc_user']))return false;
+			if(empty($_COOKIE['wrc_password']))return false;
+			$login=$_COOKIE['wrc_user'];
+			if(empty(self::$users[$login]))return false;
+			$password=md5(self::$users[$login]);
+			if($password!=$_COOKIE['wrc_password'])return false;
+		}
+		SetCookie("wrc_user",$login,time()+60*60*24*7);  
+		SetCookie("wrc_password",$password,time()+60*60*24*7);  
+		return true;
 	}
 
 
@@ -243,12 +270,25 @@ class WebRaccoon
 
 
 	static public function Content(){
-		if(self::$view=='')self::FileManager();
+		if(self::$view=='')self::ViewLogin();
+		if(self::$view=='fm')self::FileManager();
 		if(self::$view=='edit')self::ViewEdit();
 	}
 
 	static public function ViewLogin(){
 	?>
+	<div class="view-login">
+		<div class="frmLogin">
+			<form method="post">
+				<div class="lbl">Login</div>
+				<div class="row"><input type="text" name="login" value=""></div>
+				<div class="lbl">Password</div>
+				<div class="row"><input type="password" name="password" value=""></div>
+				<div class="row"><input type="submit" value="Sing in"></div>
+				<input type="hidden" name="frm-login" value="yes">
+			</form>
+		</div>
+	</div>
 	<?php
 	}
 
@@ -370,6 +410,9 @@ class WebRaccoon
 	<body>
 		<header>
 			File Manager <b>Web Raccoon</b> <label>v<?php echo self::$varsion;?></label>
+			<div class="pos-right">
+				<a href="?logout=y">Sing Out</a>
+			</div>
 		</header>
 		<div class="main">
 			<div class="Path"><?php self::IconHome();?> <?php echo self::$path?></div>
@@ -402,9 +445,16 @@ class WebRaccoon
 			font-size: 18px;
 			box-shadow: 5px 5px 5px rgba(0,0,0,0.5);
 			padding: 10px 0px;
+			position: relative;
 		}
 		header label{
 			font-size: 14px;
+		}
+
+		header .pos-right{
+			position: absolute;
+			top: 0px;
+			right: 0px;
 		}
 
 		.main{
@@ -417,6 +467,12 @@ class WebRaccoon
 
 		.main table.file-manager tr:hover td{
 			background-color: #ccc;
+		}
+
+		.view-login{
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 
 		svg{
