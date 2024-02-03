@@ -7,9 +7,7 @@
 **************************************************************************************
 */
 
-ini_set('error_reporting', E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1); 
+
 
 class WebRaccoon
 {
@@ -20,9 +18,10 @@ class WebRaccoon
 	static public $back='';
 	static public $view='';
 	static public $max_file_size=10000000000;//byte
+	static public $user='';
 	static public $users=Array(
 		'admin'=>'rt#83u',
-		'user'=>'usr@123'
+		'user'=>'usr@528'
 	);
 
 	static public function Start(){
@@ -103,6 +102,7 @@ class WebRaccoon
 			$password=md5(self::$users[$login]);
 			if($password!=$_COOKIE['wrc_password'])return false;
 		}
+		self::$user=$login;
 		SetCookie("wrc_user",$login,time()+60*60*24*7);  
 		SetCookie("wrc_password",$password,time()+60*60*24*7);  
 		return true;
@@ -281,10 +281,10 @@ class WebRaccoon
 		<div class="frmLogin">
 			<form method="post">
 				<div class="lbl">Login</div>
-				<div class="row"><input type="text" name="login" value=""></div>
+				<div class="row"><input type="text" name="login" class="input" value=""></div>
 				<div class="lbl">Password</div>
-				<div class="row"><input type="password" name="password" value=""></div>
-				<div class="row"><input type="submit" value="Sing in"></div>
+				<div class="row"><input type="password" name="password" class="input" value=""></div>
+				<div class="row"><input type="submit" class="button" value="Sing in"></div>
 				<input type="hidden" name="frm-login" value="yes">
 			</form>
 		</div>
@@ -293,23 +293,37 @@ class WebRaccoon
 	}
 
 	static public function FileManager(){
+		
 		?>
 		<div class="ToolBar">
 			<div class="item">
 				<div class="button" onclick="CreateFolder();">
-					Create Folder
+					<?php self::IconNewFolder(); ?>
+					New Folder
 				</div>
 			</div>
-			<div class="item left">
-				<?php self::IconUpload();?><span> Upload: </span>
-				<form enctype="multipart/form-data" method="POST">
-					<input type="hidden" name="MAX_FILE_SIZE" value="<?php echo self::$max_file_size;?>" />
-				    <input name="uploaded_file" type="file" />
-				    <input type="submit" value="Upload file" />
-				</form>
+			<div class="item">
+				<div class="button" onclick="WinUploadOpen();"><?php self::IconUpload();?>Upload</div>
 			</div>
 			
 		</div>
+
+		<div class="WinUpload WinCenter">
+			<div class="win">
+				<div class="title">Upload file</div>
+				<div class="close" onclick="WinUploadClose();"><?php echo self::IconClose();?></div>
+				<form enctype="multipart/form-data" method="POST">
+					<input type="hidden" name="MAX_FILE_SIZE" value="<?php echo self::$max_file_size;?>" />
+				    <input name="uploaded_file" type="file" />
+				    <div class="row">
+				    	<input type="submit" class="butUpload" value="Upload" />
+				    </div>
+				    
+				</form>
+			</div>
+		</div>
+		
+		<?php self::BreadCrumbs(); ?>
 		<table class="file-manager">
 			<?php if(self::$path!=''): ?>
 			<tr>
@@ -343,16 +357,21 @@ class WebRaccoon
 				<td><?php echo $size;?></td>
 				<td><?php echo $date;?></td>
 				<td>
-					<span onclick="Rename('<?php echo $file;?>');"><?php self::IconRename();?></span>
-					<span onclick="Delete('<?php echo $file;?>');"><?php self::IconDelete();?></span>
-					<?php if(self::IsZip($file)): ?>
-					<span onclick="Unzip('<?php echo $file;?>');"><?php self::IconUnZip();?></span>
-					<?php else: ?>
-					<span onclick="Zip('<?php echo $file;?>');"><?php self::IconZip();?></span>
-					<?php endif; ?>
-					<?php if($type!='folder'): ?>
-					<a href="?path=<?php echo self::$path."&download=".$file;?>" class="icoDelete"><?php self::IconDownload();?></a>
-					<?php endif; ?>
+					<div class="fm-menu">
+						<?php self::IconListMenu();?>
+						<div class="list">
+							<div class="item" onclick="Rename('<?php echo $file;?>');" ><?php self::IconRename();?> Rename</div>
+							<?php if(self::IsZip($file)): ?>
+							<div class="item" onclick="Unzip('<?php echo $file;?>');" ><?php self::IconUnZip();?> UnZip</div>
+							<?php else: ?>
+							<div class="item" onclick="Zip('<?php echo $file;?>');" ><?php self::IconZip();?> Zip</div>
+							<?php endif; ?>
+							<?php if($type!='folder'): ?>
+							<a href="?path=<?php echo self::$path."&download=".$file;?>" class="item"><?php self::IconDownload();?> Download</a>
+							<?php endif; ?>
+							<div class="item icoDelete" onclick="Delete('<?php echo $file;?>');" ><?php self::IconDelete();?> Delete</div>
+						</div>
+					</div>
 				</td>
 			</tr>
 			<?php
@@ -378,13 +397,14 @@ class WebRaccoon
 
 		$content = file_get_contents($path);
 		$content = htmlspecialchars($content);
+		self::BreadCrumbs();
 		?>
-		<div class="file-name">File: <?php echo $file_name;?></div>
+		<div class="file-name"><b>File:</b> <?php echo $file_name;?></div>
 		<div class="editor">
 			<form method="post">
 				<div class="ToolBar">
-					<input type="submit" value="Save">
-					<a href="?path=<?php echo self::LGet('path');?>" class="butCnacel">Cnacel</a>
+					<input type="submit" class="butOk" value="Save">
+					<a href="?path=<?php echo self::LGet('path');?>" class="butCnacel" >Cnacel</a>
 				</div>
 				<textarea name="file-content"><?php echo $content;?></textarea>
 				<input type="hidden" name="save" value="yes">
@@ -394,6 +414,8 @@ class WebRaccoon
 		<?php
 	}
 
+
+	
 
 	static public function Template(){
 	?>
@@ -410,18 +432,35 @@ class WebRaccoon
 	<body>
 		<header>
 			File Manager <b>Web Raccoon</b> <label>v<?php echo self::$varsion;?></label>
+			<?php if(self::$user): ?>
 			<div class="pos-right">
-				<a href="?logout=y">Sing Out</a>
+				<div class="account">
+					<?php self::IconUser(); ?>
+					<?php echo self::$user;?>
+					<span class="arrow"><?php self::IconArrowDown(); ?></span>
+					<div class="account-menu">
+						<div class="item">
+							<a href="?logout=y">Sing Out</a>
+						</div>
+					</div>
+				</div>
+				
+				
 			</div>
+			<?php endif; ?>
 		</header>
 		<div class="main">
-			<div class="Path"><?php self::IconHome();?> <?php echo self::$path?></div>
+			
 			<?php self::Content();?>
 		</div>
 		<script></script>
 	</body>
 	</html>	
 	<?php
+	}
+
+	static public function BreadCrumbs(){
+	?><div class="BreadCrumbs"><?php self::IconHome();?> <?php echo self::$path?></div><?php
 	}
 
 	static public function Style(){
@@ -440,25 +479,147 @@ class WebRaccoon
 			text-decoration: none;
 		}
 
+		svg{
+			width: 14px;
+			fill: #18b6d5;
+		}
+
+		.WinCenter{
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			width: 100%;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(255,255,255,0.6);
+			z-index: 600px;
+		}
+
 		header{
 			text-align: center;
 			font-size: 18px;
+			background: linear-gradient(to top, #b7b7b7, #e9e9e9);
 			box-shadow: 5px 5px 5px rgba(0,0,0,0.5);
-			padding: 10px 0px;
+			padding: 6px 0px;
 			position: relative;
 		}
+
 		header label{
 			font-size: 14px;
 		}
 
 		header .pos-right{
 			position: absolute;
-			top: 0px;
+			top: 5px;
+			right: 8px;
+		}
+
+		header .pos-right .account svg{
+			width: 12px;
+			fill: #565656;
+			margin-right: 4px;
+		}
+
+		header .pos-right .account{
+			font-size: 14px;
+			display: flex;
+			align-items: center;
+			justify-content: left;
+			cursor: pointer;
+			position: relative;
+		}
+
+		header .pos-right .account .arrow svg{
+			width: 8px;
+			margin-left: 2px;
+		}
+
+		header .pos-right .account .account-menu{
+			display: none;
+		}
+
+		header .pos-right .account:hover .account-menu{
+			display: block;
+			position: absolute;
+			top: 14px;
 			right: 0px;
+			width: 80px;
+			background: #e9e9e9;
+			font-size: 12px;
+			padding: 4px 2px;
+		}
+
+		header .pos-right .account .account-menu .item{
+			display: flex;
+			justify-content: right;
 		}
 
 		.main{
 			padding: 15px;
+		}
+
+		.WinUpload{
+			display: none;
+		}
+
+		.WinUpload.open{
+			display: flex;
+		}
+
+		.WinUpload .win{
+			background: #fff;
+			width: 320px;
+			min-height: 80px;
+			padding: 10px;
+			border-radius: 5px;
+			border: solid 1px #ccc;
+			box-shadow: 5px 5px 5px rgba(0,0,0,0.2); 
+			position: relative;
+		}
+
+		.WinUpload .win .title{
+			font-size: 18px;
+			font-weight: bold;
+			text-align: center;
+		}
+
+		.WinUpload .win .close{
+			position: absolute;
+			top: 10px;
+			right: 10px;
+			cursor: pointer;
+		}
+
+		
+
+		.WinUpload .win .close svg{
+			fill: black;
+		}
+
+		.WinUpload .win .close svg:hover{
+			fill: red;
+		}
+
+		.WinUpload .win form{
+			margin-top: 15px;
+		}
+
+		.WinUpload .win .row{
+			margin-top: 10px;
+		}
+
+		.WinUpload .win .butUpload{
+			background: linear-gradient(to top, #00b7ff, #8ad7f5);
+			width: 100%;
+			padding: 10px 0px;
+			font-size: 16px;
+			font-weight: bold;
+			color: white;
+			border: none;
+			margin-top: 10px;
+			cursor: pointer;
 		}
 
 		.main table.file-manager{
@@ -466,7 +627,53 @@ class WebRaccoon
 		}
 
 		.main table.file-manager tr:hover td{
-			background-color: #ccc;
+			background-color: #cfefdc;
+		}
+
+		.file-manager  .fm-menu{
+			position: relative;
+			cursor: pointer;
+		}
+
+		.file-manager  .fm-menu .list{
+			display: none;
+			position: absolute;
+			right: 40px;
+			top: 16px;
+			min-width: 140px;
+			background: #fff;
+			z-index: 500;
+			border: solid 1px #ccc;
+			border-radius: 4px;
+			box-shadow: 5px 5px 5px rgba(0,0,0,0.2); 
+		}
+
+		.file-manager  .fm-menu.active .list{
+			display: block;
+		}
+
+		.file-manager  .fm-menu .list .item{
+			padding: 5px;
+			display: flex;
+			align-items: center;
+			justify-content: left;
+			border-bottom: solid 1px #ccc;
+		}
+
+		.file-manager  .fm-menu .list .item:hover{
+			background: #cfefdc;
+		}
+
+		.file-manager  .fm-menu .list .item svg{
+			margin-right: 5px;
+		}
+
+		.file-manager  .fm-menu .list .item.icoDelete{
+			color: red;
+			
+		}
+		.file-manager  .fm-menu .list .item.icoDelete svg{
+			fill: red;
 		}
 
 		.view-login{
@@ -475,9 +682,32 @@ class WebRaccoon
 			justify-content: center;
 		}
 
-		svg{
-			width: 14px;
-			fill: #18b6d5;
+		.view-login .frmLogin{
+			margin: 20px 0px;
+			padding: 10px;
+			border: solid #aaa 1px;
+			border-radius: 10px;
+			box-shadow: 5px 5px 5px rgba(0,0,0,0.2); 
+		}
+		.view-login .frmLogin .row{
+			margin: 4px 0px;
+		}
+		.view-login .frmLogin .input{
+			padding: 8px 4px;
+			border-radius: 5px;
+			border: solid #aaa 1px;
+			width: 240px;
+		}
+
+		.view-login .frmLogin .button{
+			background: linear-gradient(to top, #00b7ff, #8ad7f5);
+			width: 250px;
+			padding: 10px 0px;
+			font-size: 18px;
+			font-weight: bold;
+			color: white;
+			border: none;
+			margin-top: 10px;
 		}
 
 		textarea{
@@ -490,16 +720,35 @@ class WebRaccoon
 			justify-content: left;
 			align-items: center;
 			flex-wrap: wrap;
+			margin: 5px 0px;
 		}
 
 		.ToolBar>*{
 			margin-right: 5px;
 		}
 
-		.butCnacel{
-			padding: 5px 10px;
-			cursor: pointer;
+		.ToolBar .button{
+			background: linear-gradient(to top, #cbcbcb, #f3f3f3);
+		    padding: 5px 15px 5px 8px;
+		    font-size: 12px;
+		    color: black;
+		    border: solid 1px #cbcaca;
+		    border-radius: 3px;
+		    cursor: pointer;
+		    display: flex;
+			justify-content: left;
+			align-items: center;
 		}
+
+		.ToolBar .button:hover{
+			background: linear-gradient(to top, #a9a5a5, #f3f3f3);
+		}
+
+		.ToolBar .button svg{
+			margin-right: 5px;
+		}
+
+		
 
 		.NoteError{
 			margin: 10px 0px;
@@ -516,6 +765,28 @@ class WebRaccoon
 			align-items: center;
 			flex-wrap: wrap;
 		}
+
+		.butOk{
+			background: linear-gradient(to top, #188d03, #25df04);
+			padding: 5px 15px;
+			font-size: 18px;
+			color: white;
+			border: solid 1px #d9d9d9;
+			border-radius: 3px;
+			cursor: pointer;
+			min-width: 100px;
+		}
+
+		.butCnacel{
+			background: linear-gradient(to top, #afafaf, #e7e7e7);
+			padding: 5px 15px;
+			font-size: 18px;
+			color: black;
+			border: solid 1px #d9d9d9;
+			border-radius: 3px;
+			cursor: pointer;
+
+		}
 		
 	</style>
 	<?php
@@ -529,12 +800,43 @@ class WebRaccoon
 	<script>
 		const data=<?php echo json_encode($data);?>;
 
+		window.addEventListener('load', ()=>{
+			document.querySelectorAll('.file-manager  .fm-menu').forEach((i)=>{
+				i.addEventListener('click',function(){
+					if(this.classList.contains("active")){
+						this.classList.remove('active');
+					}else{
+						document.querySelectorAll('.file-manager  .fm-menu').forEach((i)=>{
+							i.classList.remove('active');
+						});
+						this.classList.add('active');
+					}
+				});
+			});
+
+			document.addEventListener('click',function(event){
+				if ( !event.target.closest('.file-manager  .fm-menu')) {
+					document.querySelectorAll('.file-manager  .fm-menu').forEach((i)=>{
+						i.classList.remove('active');
+					});
+				};
+			});
+		});
+
 		function CreateFolder(){
 			let folder = prompt('Create folder:');
 
 			if(folder){
 				location.assign('?path='+data.path+'&create-folder='+folder);
 			}
+		}
+
+		function WinUploadOpen(){
+			document.querySelector('.WinUpload').classList.add('open');
+		}
+
+		function WinUploadClose(){
+			document.querySelector('.WinUpload').classList.remove('open');
 		}
 
 		function Rename(name=''){
@@ -573,6 +875,12 @@ class WebRaccoon
 	static public function getIcon($type='file'){
 		if($type=='folder')self::IconFolder();
 		if($type=='file')self::IconFile();
+	}
+
+	static public function IconNewFolder(){
+		?>
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M512 416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96C0 60.7 28.7 32 64 32H192c20.1 0 39.1 9.5 51.2 25.6l19.2 25.6c6 8.1 15.5 12.8 25.6 12.8H448c35.3 0 64 28.7 64 64V416zM232 376c0 13.3 10.7 24 24 24s24-10.7 24-24V312h64c13.3 0 24-10.7 24-24s-10.7-24-24-24H280V200c0-13.3-10.7-24-24-24s-24 10.7-24 24v64H168c-13.3 0-24 10.7-24 24s10.7 24 24 24h64v64z"/></svg>
+		<?php
 	}
 
 	static public function IconFolder(){
@@ -640,6 +948,37 @@ class WebRaccoon
 		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M58.9 42.1c3-6.1 9.6-9.6 16.3-8.7L320 64 564.8 33.4c6.7-.8 13.3 2.7 16.3 8.7l41.7 83.4c9 17.9-.6 39.6-19.8 45.1L439.6 217.3c-13.9 4-28.8-1.9-36.2-14.3L320 64 236.6 203c-7.4 12.4-22.3 18.3-36.2 14.3L37.1 170.6c-19.3-5.5-28.8-27.2-19.8-45.1L58.9 42.1zM321.1 128l54.9 91.4c14.9 24.8 44.6 36.6 72.5 28.6L576 211.6v167c0 22-15 41.2-36.4 46.6l-204.1 51c-10.2 2.6-20.9 2.6-31 0l-204.1-51C79 419.7 64 400.5 64 378.5v-167L191.6 248c27.8 8 57.6-3.8 72.5-28.6L318.9 128h2.2z"/></svg>
 		<?php
 	}
+
+	static public function IconUser(){
+		?>
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
+		<?php
+	}
+
+	static public function IconArrowDown(){
+		?>
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path d="M182.6 470.6c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-9.2-9.2-11.9-22.9-6.9-34.9s16.6-19.8 29.6-19.8H288c12.9 0 24.6 7.8 29.6 19.8s2.2 25.7-6.9 34.9l-128 128z"/></svg>
+		<?php
+	}
+
+	static public function IconMenu(){
+		?>
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg>
+		<?php
+	}
+
+	static public function IconListMenu(){
+		?>
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M384 480c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64L64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l320 0zM224 352c-6.7 0-13-2.8-17.6-7.7l-104-112c-6.5-7-8.2-17.2-4.4-25.9s12.5-14.4 22-14.4l208 0c9.5 0 18.2 5.7 22 14.4s2.1 18.9-4.4 25.9l-104 112c-4.5 4.9-10.9 7.7-17.6 7.7z"/></svg>
+		<?php
+	}
+
+	static public function IconClose(){
+		?>
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>
+		<?php
+	}
+
 
 
 }
