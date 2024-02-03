@@ -325,59 +325,69 @@ class WebRaccoon
 		
 		<?php self::BreadCrumbs(); ?>
 		<table class="file-manager">
+			<thead>
+				<tr>
+					<td>Name</td>
+					<td>Size</td>
+					<td>Modified</td>
+					<td></td>
+				</tr>
+			</thead>
+			<tbody>
 			<?php if(self::$path!=''): ?>
-			<tr>
-				<td><a href="?path=<?php echo  self::$back?>"><?php echo self::IconBack();?></a></td>
-				<td></td>
-				<td></td>
-				<td></td>
-			</tr>
-		<?php endif; ?>
-		<?php
-		echo '';
-		$files = scandir(self::$root.'/'.self::$path);
-		foreach($files as $file){
-			if($file=='.' OR $file=='..') continue;
-			$type='file';
-			$size='Folder';
-			$FilePath=self::getFilePath($file);
-			$date=date('Y-m-d H:i:s',filectime($FilePath));
-			if(is_dir(self::$root.'/'.self::$path.'/'.$file)){
-				$url=self::$path.'/'.$file;
-				$url=urlencode($url);
-				$url="?path=".$url;
-				$type='folder';
-			}else{
-				$url="?path=".self::$path."&edit=".$file;
-				$size=round(filesize($FilePath)/1024,4).' KB';
+				<tr>
+					<td><a href="?path=<?php echo  self::$back?>"><?php echo self::IconBack();?></a></td>
+					<td></td>
+					<td></td>
+					<td></td>
+				</tr>
+			<?php endif; ?>
+			<?php
+			echo '';
+			$files = scandir(self::$root.'/'.self::$path);
+			foreach($files as $file){
+				if($file=='.' OR $file=='..') continue;
+				$type='file';
+				$size='Folder';
+				$FilePath=self::getFilePath($file);
+				$date=date('Y-m-d H:i:s',filectime($FilePath));
+				if(is_dir(self::$root.'/'.self::$path.'/'.$file)){
+					$url=self::$path.'/'.$file;
+					$url=urlencode($url);
+					$url="?path=".$url;
+					$type='folder';
+				}else{
+					$url="?path=".self::$path."&edit=".$file;
+					$size=round(filesize($FilePath)/1024,4).' KB';
+				}
+				?>
+				<tr>
+					<td><a href="<?php echo $url;?>" class="fm-name type-<?php echo $type;?>"><?php self::getIcon($type);?> <?php echo $file;?></a></td>
+					<td><?php echo $size;?></td>
+					<td><?php echo $date;?></td>
+					<td>
+						<div class="fm-menu">
+							<?php self::IconListMenu();?>
+							<div class="list">
+								<div class="item" onclick="Rename('<?php echo $file;?>');" ><?php self::IconRename();?> Rename</div>
+								<?php if(self::IsZip($file)): ?>
+								<div class="item" onclick="Unzip('<?php echo $file;?>');" ><?php self::IconUnZip();?> UnZip</div>
+								<?php else: ?>
+								<div class="item" onclick="Zip('<?php echo $file;?>');" ><?php self::IconZip();?> Zip</div>
+								<?php endif; ?>
+								<?php if($type!='folder'): ?>
+								<a href="?path=<?php echo self::$path."&download=".$file;?>" class="item"><?php self::IconDownload();?> Download</a>
+								<?php endif; ?>
+								<div class="item icoDelete" onclick="Delete('<?php echo $file;?>');" ><?php self::IconDelete();?> Delete</div>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<?php
+				
 			}
 			?>
-			<tr>
-				<td><a href="<?php echo $url;?>"><?php self::getIcon($type);?> <?php echo $file;?></a></td>
-				<td><?php echo $size;?></td>
-				<td><?php echo $date;?></td>
-				<td>
-					<div class="fm-menu">
-						<?php self::IconListMenu();?>
-						<div class="list">
-							<div class="item" onclick="Rename('<?php echo $file;?>');" ><?php self::IconRename();?> Rename</div>
-							<?php if(self::IsZip($file)): ?>
-							<div class="item" onclick="Unzip('<?php echo $file;?>');" ><?php self::IconUnZip();?> UnZip</div>
-							<?php else: ?>
-							<div class="item" onclick="Zip('<?php echo $file;?>');" ><?php self::IconZip();?> Zip</div>
-							<?php endif; ?>
-							<?php if($type!='folder'): ?>
-							<a href="?path=<?php echo self::$path."&download=".$file;?>" class="item"><?php self::IconDownload();?> Download</a>
-							<?php endif; ?>
-							<div class="item icoDelete" onclick="Delete('<?php echo $file;?>');" ><?php self::IconDelete();?> Delete</div>
-						</div>
-					</div>
-				</td>
-			</tr>
-			<?php
-			
-		}
-		?>
+			</tbody>
 		</table>
 		<?php
 	}
@@ -466,6 +476,10 @@ class WebRaccoon
 	static public function Style(){
 	?>
 	<style>
+
+		:root {
+		  --select-color: #e6e9e9;
+		}
 		body{
 			font-family:  sans-serif;
 			font-size: 14px;
@@ -549,6 +563,9 @@ class WebRaccoon
 			background: #e9e9e9;
 			font-size: 12px;
 			padding: 4px 2px;
+			border-radius: 5px;
+			border: solid 1px #ccc;
+			box-shadow: 5px 5px 5px rgba(0,0,0,0.2); 
 		}
 
 		header .pos-right .account .account-menu .item{
@@ -558,6 +575,10 @@ class WebRaccoon
 
 		.main{
 			padding: 15px;
+		}
+
+		.BreadCrumbs{
+			margin: 10px 0px 5px 0px;
 		}
 
 		.WinUpload{
@@ -624,10 +645,38 @@ class WebRaccoon
 
 		.main table.file-manager{
 			width: 100%;
+			border-collapse: collapse;
 		}
 
-		.main table.file-manager tr:hover td{
-			background-color: #cfefdc;
+		.main table thead{
+			font-weight: bold;
+		}
+
+		.main table thead td{
+			background: linear-gradient(to top, #cbcbcb, #f3f3f3);
+		}
+
+		.main table td{
+			padding: 5px 5px;
+		}
+
+		.main table.file-manager tbody tr:hover td{
+			background-color: var(--select-color);
+		}
+
+		.main table.file-manager .fm-name{
+			display: flex;
+			justify-content: left;
+			align-items: center;
+			flex-wrap: wrap;
+		}
+
+		.main table.file-manager .fm-name.type-file svg{
+			width: 12px;
+		}
+
+		.main table.file-manager .fm-name svg{
+			margin-right: 5px;
 		}
 
 		.file-manager  .fm-menu{
@@ -661,7 +710,7 @@ class WebRaccoon
 		}
 
 		.file-manager  .fm-menu .list .item:hover{
-			background: #cfefdc;
+			background: var(--select-color);
 		}
 
 		.file-manager  .fm-menu .list .item svg{
